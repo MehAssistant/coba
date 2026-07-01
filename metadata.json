@@ -1,0 +1,6 @@
+{
+  "name": "Manajemen Keuangan Pribadi",
+  "description": "Aplikasi manajemen keuangan pribadi (Mobile Web / PWA) berbasis client-side dengan metode Enveloped Budgeting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
