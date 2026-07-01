@@ -35,7 +35,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const txCategory = transaksiList.filter(tx => tx.kategori === categoryName);
     const totalMasuk = txCategory.filter(tx => tx.jenis === 'masuk').reduce((acc, tx) => acc + tx.nominal, 0);
     const totalKeluar = txCategory.filter(tx => tx.jenis === 'keluar').reduce((acc, tx) => acc + tx.nominal, 0);
-    return { totalMasuk, totalKeluar };
+    const totalKeluarHariIni = txCategory
+      .filter(tx => tx.jenis === 'keluar' && isToday(tx.tanggal))
+      .reduce((acc, tx) => acc + tx.nominal, 0);
+    return { totalMasuk, totalKeluar, totalKeluarHariIni };
   };
 
   return (
@@ -160,12 +163,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <IconHelper name={cat.icon || 'Wallet'} className="text-white" size={18} />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
                           {cat.nama}
                         </h4>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                          Metode Enveloped Budget
-                        </p>
+                        <div className="flex items-center space-x-1.5 mt-0.5">
+                          {stats.totalKeluarHariIni > 0 ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-rose-50 text-rose-600 border border-rose-100/40">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse mr-1"></span>
+                              Hari Ini: -{formatCurrency(stats.totalKeluarHariIni)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-slate-50 text-slate-400 border border-slate-100">
+                              Hari Ini: {formatCurrency(0)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
@@ -193,7 +205,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {stats.totalMasuk > 0 && (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-slate-400 font-medium">Terpakai: {formatCurrency(stats.totalKeluar)}</span>
+                        <div className="flex items-center space-x-1">
+                          <span className="text-slate-400 font-medium">Terpakai: {formatCurrency(stats.totalKeluar)}</span>
+                          {stats.totalKeluarHariIni > 0 && (
+                            <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded">
+                              ({formatCurrency(stats.totalKeluarHariIni)} hari ini)
+                            </span>
+                          )}
+                        </div>
                         <span className="font-semibold" style={{ color: cat.warna || '#475569' }}>
                           {progressPercentage}% Tersisa
                         </span>
