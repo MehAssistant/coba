@@ -3,20 +3,22 @@ import { Kategori, Transaksi } from '../types';
 import { formatCurrency, isToday } from '../utils/dateHelper';
 import { IconHelper } from './IconHelper';
 import { motion } from 'motion/react';
-import { Wallet, TrendingDown, ChevronRight, Sparkles, PlusCircle } from 'lucide-react';
+import { Wallet, TrendingDown, ChevronRight, Sparkles, PlusCircle, Trash2 } from 'lucide-react';
 
 interface DashboardViewProps {
   kategoriList: Kategori[];
   transaksiList: Transaksi[];
   onSelectCategory: (categoryName: string) => void;
   onNavigateToAddTransaction: () => void;
+  onDeleteCategory: (categoryId: string) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   kategoriList,
   transaksiList,
   onSelectCategory,
-  onNavigateToAddTransaction
+  onNavigateToAddTransaction,
+  onDeleteCategory
 }) => {
   // 1. Total Semua Kategori: Gabungan/penjumlahan dari semua saldo di seluruh kategori saat ini
   const totalSaldo = kategoriList.reduce((acc, cat) => acc + cat.saldo_saat_ini, 0);
@@ -155,11 +157,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                     
-                    <div className="text-right">
-                      <p className="text-sm font-extrabold text-slate-800">
-                        {formatCurrency(cat.saldo_saat_ini)}
-                      </p>
-                      <span className="text-[9px] text-slate-400 font-mono">Sisa Saldo</span>
+                    <div className="flex items-center space-x-2.5">
+                      <div className="text-right">
+                        <p className="text-sm font-extrabold text-slate-800">
+                          {formatCurrency(cat.saldo_saat_ini)}
+                        </p>
+                        <span className="text-[9px] text-slate-400 font-mono block">Sisa Saldo</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteCategory(cat.id);
+                        }}
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-600 transition-all border border-rose-100/30 cursor-pointer flex items-center justify-center shrink-0 self-center"
+                        title="Hapus Amplop"
+                      >
+                        <Trash2 size={13} className="stroke-[2.5px]" />
+                      </button>
                     </div>
                   </div>
 

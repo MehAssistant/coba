@@ -138,6 +138,18 @@ export default function App() {
     saveState(updatedCats, updatedTxs);
   };
 
+  // Delete category and all associated transactions
+  const handleDeleteCategory = (categoryId: string) => {
+    const targetCat = kategoriList.find(c => c.id === categoryId);
+    if (!targetCat) return;
+
+    if (confirm(`Apakah Anda yakin ingin menghapus amplop "${targetCat.nama}"? Semua transaksi yang berhubungan dengan amplop ini akan ikut terhapus secara permanen.`)) {
+      const updatedCats = kategoriList.filter(c => c.id !== categoryId);
+      const updatedTxs = transaksiList.filter(tx => tx.kategori !== targetCat.nama);
+      saveState(updatedCats, updatedTxs);
+    }
+  };
+
   // Clear or reset all storage to default seed
   const handleResetData = () => {
     if (confirm('Apakah Anda yakin ingin menyetel ulang data kembali ke setelan default? Seluruh perubahan kustom Anda akan dihapus.')) {
@@ -202,9 +214,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex justify-center items-center py-0 md:py-10 px-0 md:px-4 font-sans antialiased text-slate-800">
+    <div className="min-h-screen bg-slate-900 flex justify-center items-center py-0 md:py-10 px-0 md:px-4 font-sans antialiased text-slate-800 overflow-hidden">
       {/* Dynamic desktop smartphone wrap frame to emphasize the Mobile-First UI approach */}
-      <div className="w-full max-w-md min-h-screen md:min-h-[850px] md:h-[850px] md:rounded-[40px] bg-slate-50 md:shadow-2xl md:border-[10px] md:border-slate-800 flex flex-col overflow-hidden relative">
+      <div className="w-full max-w-md h-screen md:h-[850px] max-h-screen md:max-h-[850px] md:rounded-[40px] bg-slate-50 md:shadow-2xl md:border-[10px] md:border-slate-800 flex flex-col overflow-hidden relative">
         
         {/* Dynamic Notch / Status indicator for mobile screen flavor */}
         <div className="hidden md:flex justify-between items-center bg-slate-50 px-8 pt-3 pb-1 text-[11px] font-bold text-slate-400 font-mono select-none">
@@ -267,7 +279,7 @@ export default function App() {
         </header>
 
         {/* Content Area - Scrollable with custom styling */}
-        <main className="flex-1 overflow-y-auto px-6 pt-5 pb-24 no-scrollbar">
+        <main className="flex-1 overflow-y-auto px-6 pt-5 pb-28 no-scrollbar">
           <AnimatePresence mode="wait">
             {activeTab === 'home' && (
               <motion.div
@@ -285,6 +297,7 @@ export default function App() {
                     setPreselectedCategory('');
                     setActiveTab('add');
                   }}
+                  onDeleteCategory={handleDeleteCategory}
                 />
               </motion.div>
             )}
@@ -325,8 +338,8 @@ export default function App() {
           </AnimatePresence>
         </main>
 
-        {/* Bottom Navigation Bar */}
-        <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 py-2.5 px-6 flex items-center justify-around shadow-lg z-30">
+        {/* Floating Bottom Navigation Bar */}
+        <nav className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md border border-slate-100/80 py-2 px-6 flex items-center justify-around rounded-2xl shadow-xl z-30">
           {/* Tab 1: Home Dashboard */}
           <button
             onClick={() => setActiveTab('home')}
