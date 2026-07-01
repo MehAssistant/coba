@@ -205,14 +205,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {stats.totalMasuk > 0 && (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
-                        <div className="flex items-center space-x-1">
-                          <span className="text-slate-400 font-medium">Terpakai: {formatCurrency(stats.totalKeluar)}</span>
-                          {stats.totalKeluarHariIni > 0 && (
-                            <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded">
-                              ({formatCurrency(stats.totalKeluarHariIni)} hari ini)
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-slate-400 font-medium">Terpakai: {formatCurrency(stats.totalKeluar)}</span>
                         <span className="font-semibold" style={{ color: cat.warna || '#475569' }}>
                           {progressPercentage}% Tersisa
                         </span>
