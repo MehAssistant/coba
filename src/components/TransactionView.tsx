@@ -19,6 +19,7 @@ interface TransactionViewProps {
     saldoAwal: number;
     warna: string;
     icon: string;
+    rekomendasi_aktif?: boolean;
   }) => void;
   preselectedCategory?: string;
 }
@@ -60,6 +61,7 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
   const [newCatSaldoAwal, setNewCatSaldoAwal] = useState<string>('');
   const [newCatWarna, setNewCatWarna] = useState<string>('#3b82f6');
   const [newCatIcon, setNewCatIcon] = useState<string>('Wallet');
+  const [newCatRekomendasiAktif, setNewCatRekomendasiAktif] = useState<boolean>(false);
 
   // Sync preselected category
   useEffect(() => {
@@ -151,7 +153,8 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
       nama: newCatNama.trim(),
       saldoAwal: parsedSaldo,
       warna: newCatWarna,
-      icon: newCatIcon
+      icon: newCatIcon,
+      rekomendasi_aktif: newCatRekomendasiAktif
     });
 
     // Select this category automatically in transaction form
@@ -163,6 +166,7 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
     // Reset fields
     setNewCatNama('');
     setNewCatSaldoAwal('');
+    setNewCatRekomendasiAktif(false);
     setShowAddCategoryForm(false);
 
     // Auto clear success message after 3 seconds
@@ -321,6 +325,27 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
                       <IconHelper name={ico} size={18} />
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Aturan & Rekomendasi Pengeluaran Toggle */}
+              <div className="bg-white border border-slate-200/60 rounded-2xl p-4 space-y-2.5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700">Aturan & Rekomendasi Pengeluaran</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                      Aktifkan pembagian budget merata ke milestone tanggal terdekat & resep hemat mi/telur.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={newCatRekomendasiAktif}
+                      onChange={(e) => setNewCatRekomendasiAktif(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
                 </div>
               </div>
 

@@ -15,6 +15,7 @@ export interface Kategori {
   saldo_saat_ini: number;
   warna?: string; // Tailwind color class or hex code
   icon?: string;  // Lucide icon name representation
+  rekomendasi_aktif?: boolean;
 }
 
 export interface Arsip {

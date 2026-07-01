@@ -1,9 +1,89 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Kategori, Transaksi } from '../types';
 import { formatCurrency, isToday } from '../utils/dateHelper';
 import { IconHelper } from './IconHelper';
-import { motion } from 'motion/react';
-import { Wallet, TrendingDown, ChevronRight, Sparkles, PlusCircle, Trash2, Archive } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Wallet, TrendingDown, ChevronRight, Sparkles, PlusCircle, Trash2, Archive, Pencil, X, Check, Info } from 'lucide-react';
+
+const AVAILABLE_ICONS = ['Utensils', 'Car', 'Shirt', 'ShoppingBag', 'Sparkles', 'Home', 'HeartPulse', 'BookOpen', 'Smartphone', 'Coins'];
+const AVAILABLE_COLORS = [
+  { name: 'Amber', hex: '#f59e0b', bg: 'bg-amber-500' },
+  { name: 'Blue', hex: '#3b82f6', bg: 'bg-blue-500' },
+  { name: 'Emerald', hex: '#10b981', bg: 'bg-emerald-500' },
+  { name: 'Violet', hex: '#8b5cf6', bg: 'bg-violet-500' },
+  { name: 'Pink', hex: '#ec4899', bg: 'bg-pink-500' },
+  { name: 'Red', hex: '#ef4444', bg: 'bg-red-500' },
+  { name: 'Cyan', hex: '#06b6d4', bg: 'bg-cyan-500' },
+  { name: 'Orange', hex: '#f97316', bg: 'bg-orange-500' }
+];
+
+const getSmartBudgetInfo = (saldo: number) => {
+  const now = new Date();
+  const day = now.getDate();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  // Milestones: 1, 7, 14, 21, 28
+  let targetMilestone = 1;
+  let remainingDays = 1;
+  let milestoneLabel = '';
+
+  if (day >= 1 && day < 7) {
+    targetMilestone = 7;
+    remainingDays = 7 - day;
+    milestoneLabel = 'tgl 7';
+  } else if (day >= 7 && day < 14) {
+    targetMilestone = 14;
+    remainingDays = 14 - day;
+    milestoneLabel = 'tgl 14';
+  } else if (day >= 14 && day < 21) {
+    targetMilestone = 21;
+    remainingDays = 21 - day;
+    milestoneLabel = 'tgl 21';
+  } else if (day >= 21 && day < 28) {
+    targetMilestone = 28;
+    remainingDays = 28 - day;
+    milestoneLabel = 'tgl 28';
+  } else {
+    // 28 or later. Milestone is 1st of next month.
+    const daysInCurrentMonth = new Date(year, month + 1, 0).getDate();
+    targetMilestone = 1;
+    remainingDays = (daysInCurrentMonth - day) + 1;
+    milestoneLabel = 'tgl 1 bulan depan';
+  }
+
+  const budgetHarian = remainingDays > 0 ? Math.max(0, Math.floor(saldo / remainingDays)) : 0;
+
+  let recommendationText = '';
+  let adviceType: 'info' | 'warning' | 'success' | 'danger' = 'info';
+
+  if (saldo <= 0) {
+    recommendationText = '⚠️ Saldo amplop habis atau minus. Segera lakukan Top Up amplop ini untuk mengaktifkan kembali pembagian budget harian!';
+    adviceType = 'danger';
+  } else {
+    if (budgetHarian >= 30000) {
+      recommendationText = `Budget harian Anda aman (${formatCurrency(budgetHarian)}/hari). Anda bisa makan dengan gizi seimbang. Namun jika ingin ekstra hemat untuk tabungan, disarankan membeli telur seharga Rp 3.000/butir untuk lauk pauk!`;
+      adviceType = 'success';
+    } else if (budgetHarian >= 15000) {
+      recommendationText = `⚠️ Pengeluaran Anda beberapa hari terakhir cukup boros! Jatah harian Anda terkompresi di bawah normal menjadi ${formatCurrency(budgetHarian)}/hari hingga ${milestoneLabel} (${remainingDays} hari). Untuk menyeimbangkan anggaran, Anda harus tegas: disarankan 1 hari penuh full makan telur saja (Rp 3.000/butir, cukup Rp 9.000 untuk 3x makan) agar hari berikutnya kembali aman dan kantong stabil!`;
+      adviceType = 'info';
+    } else if (budgetHarian >= 4000) {
+      recommendationText = `⚠️ PERINGATAN KERAS! Pengeluaran Anda sangat boros beberapa hari terakhir! Jatah harian tersisa kritis hanya ${formatCurrency(budgetHarian)}/hari. Anda harus merelakan beberapa hari dengan hemat ekstra: disarankan 2 hari penuh makan Mi Instan seharga Rp 4.000/bungkus atau lauk telur (Rp 3.000/butir) agar anggaran tidak jebol sebelum ${milestoneLabel}!`;
+      adviceType = 'warning';
+    } else {
+      recommendationText = `🚨 SIAGA DARURAT! Pengeluaran Anda terlampau boros hingga jatah harian tersisa tidak sampai Rp 4.000/hari. Anda wajib mengorbankan kenyamanan kuliner saat ini: disarankan segera Top Up atau puasa/makan mi instan jatah minimal seharga Rp 4.000/bungkus demi menyambung hidup hingga ${milestoneLabel}!`;
+      adviceType = 'danger';
+    }
+  }
+
+  return {
+    remainingDays,
+    milestoneLabel,
+    budgetHarian,
+    recommendationText,
+    adviceType
+  };
+};
 
 interface DashboardViewProps {
   kategoriList: Kategori[];
@@ -12,6 +92,12 @@ interface DashboardViewProps {
   onNavigateToAddTransaction: () => void;
   onDeleteCategory: (categoryId: string) => void;
   onArchiveCurrentMonth: () => void;
+  onUpdateCategory: (categoryId: string, data: {
+    nama: string;
+    warna: string;
+    icon: string;
+    rekomendasi_aktif: boolean;
+  }) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -20,8 +106,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectCategory,
   onNavigateToAddTransaction,
   onDeleteCategory,
-  onArchiveCurrentMonth
+  onArchiveCurrentMonth,
+  onUpdateCategory
 }) => {
+  // Editing state
+  const [editingCategory, setEditingCategory] = useState<Kategori | null>(null);
+  const [editNama, setEditNama] = useState<string>('');
+  const [editWarna, setEditWarna] = useState<string>('');
+  const [editIcon, setEditIcon] = useState<string>('');
+  const [editRekomendasiAktif, setEditRekomendasiAktif] = useState<boolean>(false);
+
+  const startEditCategory = (cat: Kategori) => {
+    setEditingCategory(cat);
+    setEditNama(cat.nama);
+    setEditWarna(cat.warna || '#3b82f6');
+    setEditIcon(cat.icon || 'Wallet');
+    setEditRekomendasiAktif(cat.rekomendasi_aktif || false);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    if (!editNama.trim()) return;
+
+    onUpdateCategory(editingCategory.id, {
+      nama: editNama.trim(),
+      warna: editWarna,
+      icon: editIcon,
+      rekomendasi_aktif: editRekomendasiAktif
+    });
+
+    setEditingCategory(null);
+  };
+
   // 1. Total Semua Kategori: Gabungan/penjumlahan dari semua saldo di seluruh kategori saat ini
   const totalSaldo = kategoriList.reduce((acc, cat) => acc + cat.saldo_saat_ini, 0);
 
@@ -166,7 +283,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
                           {cat.nama}
                         </h4>
-                        <div className="flex items-center space-x-1.5 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           {stats.totalKeluarHariIni > 0 ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-rose-50 text-rose-600 border border-rose-100/40">
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse mr-1"></span>
@@ -177,12 +294,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               Hari Ini: {formatCurrency(0)}
                             </span>
                           )}
+                          {cat.rekomendasi_aktif && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100/40">
+                              💡 Pintar
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2.5">
-                      <div className="text-right">
+                    <div className="flex items-center space-x-2">
+                      <div className="text-right mr-1">
                         <p className="text-sm font-extrabold text-slate-800">
                           {formatCurrency(cat.saldo_saat_ini)}
                         </p>
@@ -191,12 +313,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          startEditCategory(cat);
+                        }}
+                        className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition-all border border-slate-100 hover:border-indigo-100/30 cursor-pointer flex items-center justify-center shrink-0 self-center"
+                        title="Edit Amplop"
+                      >
+                        <Pencil size={12} className="stroke-[2.5px]" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           onDeleteCategory(cat.id);
                         }}
                         className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-600 transition-all border border-rose-100/30 cursor-pointer flex items-center justify-center shrink-0 self-center"
                         title="Hapus Amplop"
                       >
-                        <Trash2 size={13} className="stroke-[2.5px]" />
+                        <Trash2 size={12} className="stroke-[2.5px]" />
                       </button>
                     </div>
                   </div>
@@ -221,6 +353,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Smart Recommendation Block */}
+                  {cat.rekomendasi_aktif && (() => {
+                    const rec = getSmartBudgetInfo(cat.saldo_saat_ini);
+                    const bgClass = 
+                      rec.adviceType === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
+                      rec.adviceType === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-800' :
+                      rec.adviceType === 'danger' ? 'bg-rose-50 border-rose-100 text-rose-800' :
+                      'bg-indigo-50 border-indigo-100/80 text-indigo-900';
+                    const badgeColor = 
+                      rec.adviceType === 'success' ? 'bg-emerald-500 text-white' :
+                      rec.adviceType === 'warning' ? 'bg-amber-500 text-white' :
+                      rec.adviceType === 'danger' ? 'bg-rose-500 text-white animate-pulse' :
+                      'bg-indigo-600 text-white';
+
+                    return (
+                      <div className={`mt-3 p-3 rounded-xl border text-[10px] ${bgClass} space-y-1`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold tracking-wide uppercase text-[9px] flex items-center gap-1">
+                            <span>🎯 Rekomendasi Belanja</span>
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold ${badgeColor}`}>
+                            Limit: {formatCurrency(rec.budgetHarian)} / hari
+                          </span>
+                        </div>
+                        <p className="leading-relaxed font-medium">
+                          {rec.recommendationText}
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-dashed border-slate-100 text-[10px] text-slate-400">
                     <span className="font-mono">Top Up: {formatCurrency(stats.totalMasuk || cat.saldo_saat_ini)}</span>
@@ -247,6 +410,142 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Category Editor Modal */}
+      <AnimatePresence>
+        {editingCategory && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingCategory(null)}
+              className="absolute inset-0 bg-slate-900/45 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 z-10 space-y-4"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: editWarna }} />
+                  <span>Edit Amplop Anggaran</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory(null)}
+                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Nama Amplop / Kategori
+                  </label>
+                  <input
+                    type="text"
+                    value={editNama}
+                    onChange={(e) => setEditNama(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500 rounded-2xl px-4 py-3 text-sm text-slate-800 font-bold outline-none transition-all shadow-xs"
+                    required
+                  />
+                </div>
+
+                {/* Color Selector */}
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Pilih Warna Amplop
+                  </label>
+                  <div className="grid grid-cols-8 gap-1.5">
+                    {AVAILABLE_COLORS.map((col) => (
+                      <button
+                        key={col.hex}
+                        type="button"
+                        onClick={() => setEditWarna(col.hex)}
+                        className={`w-7 h-7 rounded-full ${col.bg} flex items-center justify-center border-2 transition-all cursor-pointer ${
+                          editWarna === col.hex ? 'border-slate-800 scale-110 shadow-md' : 'border-transparent hover:scale-105'
+                        }`}
+                        title={col.name}
+                      >
+                        {editWarna === col.hex && (
+                          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Icon Selector */}
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Pilih Icon Representasi
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AVAILABLE_ICONS.map((ico) => (
+                      <button
+                        key={ico}
+                        type="button"
+                        onClick={() => setEditIcon(ico)}
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all cursor-pointer ${
+                          editIcon === ico
+                            ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <IconHelper name={ico} size={15} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recommendation Toggle */}
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-700">Aturan & Rekomendasi Pengeluaran</h4>
+                      <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                        Sistem cerdas membagi sisa budget ke milestone terdekat dan memberi saran belanja telur (Rp 3rb) / Mi (Rp 4rb) jika boros.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={editRekomendasiAktif}
+                        onChange={(e) => setEditRekomendasiAktif(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Form Buttons */}
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory(null)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer text-center"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white py-3 rounded-2xl text-xs font-bold transition-all shadow-md cursor-pointer text-center"
+                  >
+                    Simpan Perubahan
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

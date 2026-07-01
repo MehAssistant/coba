@@ -103,13 +103,15 @@ export default function App() {
     saldoAwal: number;
     warna: string;
     icon: string;
+    rekomendasi_aktif?: boolean;
   }) => {
     const newCat: Kategori = {
       id: `cat-${Date.now()}`,
       nama: data.nama,
       saldo_saat_ini: data.saldoAwal,
       warna: data.warna,
-      icon: data.icon
+      icon: data.icon,
+      rekomendasi_aktif: data.rekomendasi_aktif || false
     };
 
     const updatedCats = [...kategoriList, newCat];
@@ -164,6 +166,48 @@ export default function App() {
       const updatedTxs = transaksiList.filter(tx => tx.kategori !== targetCat.nama);
       saveState(updatedCats, updatedTxs);
     }
+  };
+
+  // Update existing category details
+  const handleUpdateCategory = (categoryId: string, data: {
+    nama: string;
+    warna: string;
+    icon: string;
+    rekomendasi_aktif: boolean;
+  }) => {
+    const oldCat = kategoriList.find(c => c.id === categoryId);
+    if (!oldCat) return;
+
+    const oldName = oldCat.nama;
+    const newName = data.nama.trim();
+
+    // Prevent duplicate category names
+    if (newName !== oldName && kategoriList.some(c => c.nama.toLowerCase() === newName.toLowerCase())) {
+      alert(`Gagal mengubah nama. Amplop dengan nama "${newName}" sudah ada!`);
+      return;
+    }
+
+    const updatedCats = kategoriList.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          nama: newName,
+          warna: data.warna,
+          icon: data.icon,
+          rekomendasi_aktif: data.rekomendasi_aktif
+        };
+      }
+      return cat;
+    });
+
+    const updatedTxs = transaksiList.map(tx => {
+      if (tx.kategori === oldName) {
+        return { ...tx, kategori: newName };
+      }
+      return tx;
+    });
+
+    saveState(updatedCats, updatedTxs);
   };
 
   // Archive current month's data
@@ -359,6 +403,7 @@ export default function App() {
                   }}
                   onDeleteCategory={handleDeleteCategory}
                   onArchiveCurrentMonth={handleArchiveCurrentMonth}
+                  onUpdateCategory={handleUpdateCategory}
                 />
               </motion.div>
             )}
