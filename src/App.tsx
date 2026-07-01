@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Kategori, Transaksi, JenisTransaksi } from './types';
+import { Kategori, Transaksi, JenisTransaksi, Arsip } from './types';
 import { DEFAULT_CATEGORIES, DEFAULT_TRANSACTIONS } from './initialData';
 import { DashboardView } from './components/DashboardView';
 import { TransactionView } from './components/TransactionView';
 import { HistoryView } from './components/HistoryView';
+import { ArchiveView } from './components/ArchiveView';
 import { TransactionDetailsModal } from './components/TransactionDetailsModal';
 import { IconHelper } from './components/IconHelper';
-import { Wallet, PlusCircle, History, RotateCcw, Smartphone, Coins, Download, Upload } from 'lucide-react';
+import { Wallet, PlusCircle, History, RotateCcw, Smartphone, Coins, Download, Upload, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-type TabType = 'home' | 'add' | 'history';
+type TabType = 'home' | 'add' | 'history' | 'archive';
 
 export default function App() {
   // 1. Core state initialized from localStorage or defaults
   const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
   const [transaksiList, setTransaksiList] = useState<Transaksi[]>([]);
+  const [arsipList, setArsipList] = useState<Arsip[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [preselectedCategory, setPreselectedCategory] = useState<string>('');
 
@@ -26,6 +28,7 @@ export default function App() {
   useEffect(() => {
     const savedKategori = localStorage.getItem('kb_kategori_list');
     const savedTransaksi = localStorage.getItem('kb_transaksi_list');
+    const savedArsip = localStorage.getItem('kb_arsip_list');
 
     if (savedKategori && savedTransaksi) {
       setKategoriList(JSON.parse(savedKategori));
@@ -37,14 +40,27 @@ export default function App() {
       localStorage.setItem('kb_kategori_list', JSON.stringify(DEFAULT_CATEGORIES));
       localStorage.setItem('kb_transaksi_list', JSON.stringify(DEFAULT_TRANSACTIONS));
     }
+
+    if (savedArsip) {
+      setArsipList(JSON.parse(savedArsip));
+    } else {
+      setArsipList([]);
+      localStorage.setItem('kb_arsip_list', JSON.stringify([]));
+    }
   }, []);
 
   // Persist state changes
-  const saveState = (updatedCats: Kategori[], updatedTxs: Transaksi[]) => {
+  const saveState = (
+    updatedCats: Kategori[],
+    updatedTxs: Transaksi[],
+    updatedArsip: Arsip[] = arsipList
+  ) => {
     setKategoriList(updatedCats);
     setTransaksiList(updatedTxs);
+    setArsipList(updatedArsip);
     localStorage.setItem('kb_kategori_list', JSON.stringify(updatedCats));
     localStorage.setItem('kb_transaksi_list', JSON.stringify(updatedTxs));
+    localStorage.setItem('kb_arsip_list', JSON.stringify(updatedArsip));
   };
 
   // 2. Action Handlers
@@ -150,13 +166,55 @@ export default function App() {
     }
   };
 
+  // Archive current month's data
+  const handleArchiveCurrentMonth = () => {
+    const targetBulan = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date());
+
+    if (arsipList.some((a) => a.bulan === targetBulan)) {
+      alert(`Tidak bisa mengarsipkan 2x di bulan yang sama (${targetBulan}), kecuali yang lama dihapus di menu arsip.`);
+      return;
+    }
+
+    if (confirm(`Apakah Anda yakin ingin mengarsipkan seluruh data bulan ini (${targetBulan})? Semua transaksi akan dipindahkan ke dalam arsip bulanan, saldo kategori Anda akan dikosongkan kembali menjadi nol untuk memulai bulan baru.`)) {
+      const newArchive: Arsip = {
+        id: `archive-${Date.now()}`,
+        bulan: targetBulan,
+        kategoriList: JSON.parse(JSON.stringify(kategoriList)), // deep copy
+        transaksiList: JSON.parse(JSON.stringify(transaksiList)), // deep copy
+        tanggalArsip: new Date().toISOString()
+      };
+
+      const updatedArsip = [newArchive, ...arsipList];
+      // Reset current state for new month
+      const updatedCats = kategoriList.map(cat => ({ ...cat, saldo_saat_ini: 0 }));
+      const updatedTxs: Transaksi[] = [];
+
+      saveState(updatedCats, updatedTxs, updatedArsip);
+      alert(`Data bulan ini berhasil dimasukkan ke dalam arsip ${targetBulan}! Mulai catat bulan baru dengan amplop kosong.`);
+      setActiveTab('archive');
+    }
+  };
+
+  // Delete an archive item
+  const handleDeleteArchive = (archiveId: string) => {
+    const targetArsip = arsipList.find((a) => a.id === archiveId);
+    if (!targetArsip) return;
+
+    if (confirm(`Apakah Anda yakin ingin menghapus arsip bulan "${targetArsip.bulan}" secara permanen? Tindakan ini tidak dapat dibatalkan.`)) {
+      const updatedArsip = arsipList.filter((a) => a.id !== archiveId);
+      saveState(kategoriList, transaksiList, updatedArsip);
+    }
+  };
+
   // Clear or reset all storage to default seed
   const handleResetData = () => {
     if (confirm('Apakah Anda yakin ingin menyetel ulang data kembali ke setelan default? Seluruh perubahan kustom Anda akan dihapus.')) {
       setKategoriList(DEFAULT_CATEGORIES);
       setTransaksiList(DEFAULT_TRANSACTIONS);
+      setArsipList([]);
       localStorage.setItem('kb_kategori_list', JSON.stringify(DEFAULT_CATEGORIES));
       localStorage.setItem('kb_transaksi_list', JSON.stringify(DEFAULT_TRANSACTIONS));
+      localStorage.setItem('kb_arsip_list', JSON.stringify([]));
       setActiveTab('home');
     }
   };
@@ -166,12 +224,13 @@ export default function App() {
     const dataStr = JSON.stringify({
       kategoriList,
       transaksiList,
-      version: '1.0.0',
+      arsipList,
+      version: '1.1.0',
       timestamp: new Date().toISOString()
     }, null, 2);
     
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `KantongKu_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    const exportFileDefaultName = `KantongKu_Full_Backup_${new Date().toISOString().slice(0,10)}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
@@ -189,8 +248,9 @@ export default function App() {
       try {
         const parsedData = JSON.parse(e.target?.result as string);
         if (Array.isArray(parsedData.kategoriList) && Array.isArray(parsedData.transaksiList)) {
-          saveState(parsedData.kategoriList, parsedData.transaksiList);
-          alert('Data berhasil dipulihkan dari file backup!');
+          const restoredArsip = Array.isArray(parsedData.arsipList) ? parsedData.arsipList : [];
+          saveState(parsedData.kategoriList, parsedData.transaksiList, restoredArsip);
+          alert('Data fungsional berhasil dipulihkan dari file backup!');
           setActiveTab('home');
         } else {
           alert('Format file backup tidak valid.');
@@ -298,6 +358,7 @@ export default function App() {
                     setActiveTab('add');
                   }}
                   onDeleteCategory={handleDeleteCategory}
+                  onArchiveCurrentMonth={handleArchiveCurrentMonth}
                 />
               </motion.div>
             )}
@@ -335,20 +396,35 @@ export default function App() {
                 />
               </motion.div>
             )}
+
+            {activeTab === 'archive' && (
+              <motion.div
+                key="archive"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ArchiveView
+                  arsipList={arsipList}
+                  onDeleteArchive={handleDeleteArchive}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
         {/* Floating Bottom Navigation Bar */}
-        <nav className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md border border-slate-100/80 py-2 px-6 flex items-center justify-around rounded-2xl shadow-xl z-30">
+        <nav className="absolute bottom-4 left-3 right-3 bg-white/90 backdrop-blur-md border border-slate-100/80 py-2 px-3 flex items-center justify-around rounded-2xl shadow-xl z-30">
           {/* Tab 1: Home Dashboard */}
           <button
             onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center space-y-1 py-1 px-3.5 rounded-xl transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
               activeTab === 'home' ? 'text-indigo-600 scale-105' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <Wallet size={20} className={activeTab === 'home' ? 'stroke-[2.5px]' : 'stroke-2'} />
-            <span className="text-[10px] font-bold">Dashboard</span>
+            <Wallet size={19} className={activeTab === 'home' ? 'stroke-[2.5px]' : 'stroke-2'} />
+            <span className="text-[9px] font-bold">Dashboard</span>
             {activeTab === 'home' && (
               <motion.div
                 layoutId="activeDot"
@@ -363,12 +439,12 @@ export default function App() {
               setPreselectedCategory('');
               setActiveTab('add');
             }}
-            className={`flex flex-col items-center space-y-1 py-1 px-3.5 rounded-xl transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
               activeTab === 'add' ? 'text-indigo-600 scale-105' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <PlusCircle size={20} className={activeTab === 'add' ? 'stroke-[2.5px]' : 'stroke-2'} />
-            <span className="text-[10px] font-bold">Catat</span>
+            <PlusCircle size={19} className={activeTab === 'add' ? 'stroke-[2.5px]' : 'stroke-2'} />
+            <span className="text-[9px] font-bold">Catat</span>
             {activeTab === 'add' && (
               <motion.div
                 layoutId="activeDot"
@@ -380,13 +456,30 @@ export default function App() {
           {/* Tab 3: History Timeline */}
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex flex-col items-center space-y-1 py-1 px-3.5 rounded-xl transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
               activeTab === 'history' ? 'text-indigo-600 scale-105' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <History size={20} className={activeTab === 'history' ? 'stroke-[2.5px]' : 'stroke-2'} />
-            <span className="text-[10px] font-bold">Riwayat</span>
+            <History size={19} className={activeTab === 'history' ? 'stroke-[2.5px]' : 'stroke-2'} />
+            <span className="text-[9px] font-bold">Riwayat</span>
             {activeTab === 'history' && (
+              <motion.div
+                layoutId="activeDot"
+                className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-indigo-600"
+              />
+            )}
+          </button>
+
+          {/* Tab 4: Archive */}
+          <button
+            onClick={() => setActiveTab('archive')}
+            className={`flex flex-col items-center space-y-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
+              activeTab === 'archive' ? 'text-indigo-600 scale-105' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Archive size={19} className={activeTab === 'archive' ? 'stroke-[2.5px]' : 'stroke-2'} />
+            <span className="text-[9px] font-bold">Arsip</span>
+            {activeTab === 'archive' && (
               <motion.div
                 layoutId="activeDot"
                 className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-indigo-600"

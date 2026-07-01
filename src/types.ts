@@ -17,7 +17,16 @@ export interface Kategori {
   icon?: string;  // Lucide icon name representation
 }
 
+export interface Arsip {
+  id: string;
+  bulan: string; // Format: "Bulan YYYY" e.g., "Juli 2026"
+  kategoriList: Kategori[];
+  transaksiList: Transaksi[];
+  tanggalArsip: string;
+}
+
 export interface AppState {
   kategoriList: Kategori[];
   transaksiList: Transaksi[];
+  arsipList: Arsip[];
 }

@@ -3,7 +3,7 @@ import { Kategori, Transaksi } from '../types';
 import { formatCurrency, isToday } from '../utils/dateHelper';
 import { IconHelper } from './IconHelper';
 import { motion } from 'motion/react';
-import { Wallet, TrendingDown, ChevronRight, Sparkles, PlusCircle, Trash2 } from 'lucide-react';
+import { Wallet, TrendingDown, ChevronRight, Sparkles, PlusCircle, Trash2, Archive } from 'lucide-react';
 
 interface DashboardViewProps {
   kategoriList: Kategori[];
@@ -11,6 +11,7 @@ interface DashboardViewProps {
   onSelectCategory: (categoryName: string) => void;
   onNavigateToAddTransaction: () => void;
   onDeleteCategory: (categoryId: string) => void;
+  onArchiveCurrentMonth: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -18,7 +19,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   transaksiList,
   onSelectCategory,
   onNavigateToAddTransaction,
-  onDeleteCategory
+  onDeleteCategory,
+  onArchiveCurrentMonth
 }) => {
   // 1. Total Semua Kategori: Gabungan/penjumlahan dari semua saldo di seluruh kategori saat ini
   const totalSaldo = kategoriList.reduce((acc, cat) => acc + cat.saldo_saat_ini, 0);
@@ -90,13 +92,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           
-          <button
-            onClick={onNavigateToAddTransaction}
-            className="flex items-center space-x-1.5 bg-white text-indigo-700 hover:bg-slate-50 active:scale-95 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
-          >
-            <PlusCircle size={14} />
-            <span>Top Up / Catat</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onArchiveCurrentMonth}
+              className="flex items-center space-x-1 bg-indigo-500 hover:bg-indigo-400 active:scale-95 border border-indigo-400 text-white px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+              title="Arsipkan data bulan ini"
+            >
+              <Archive size={13} />
+              <span>Arsipkan</span>
+            </button>
+            <button
+              onClick={onNavigateToAddTransaction}
+              className="flex items-center space-x-1.5 bg-white text-indigo-700 hover:bg-slate-50 active:scale-95 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+            >
+              <PlusCircle size={14} />
+              <span>Top Up / Catat</span>
+            </button>
+          </div>
         </div>
       </motion.div>
 
